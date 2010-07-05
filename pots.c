@@ -33,7 +33,7 @@ static int num_array_refs;
 static int num_classloader_refs;
 static int num_signer_refs;
 static int num_protection_domain_refs;
-static int num_interface_refs; 
+static int num_interface_refs;
 static int num_static_field_refs;
 static int num_constant_pool_refs;
 
@@ -43,9 +43,7 @@ static int num_constant_pool_refs;
  *   The interface GetErrorName() returns the actual enumeration constant
  *   name, making the error messages much easier to understand.
  */
-static void
-check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str)
-{
+static void check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str) {
     if ( errnum != JVMTI_ERROR_NONE ) {
         char       *errnum_str;
 
@@ -58,9 +56,7 @@ check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str)
 
 
 /* Enter a critical section by doing a JVMTI Raw Monitor Enter */
-static void
-enter_critical_section(jvmtiEnv *jvmti)
-{
+static void enter_critical_section(jvmtiEnv *jvmti) {
     jvmtiError error;
 
     error = (*jvmti)->RawMonitorEnter(jvmti, gdata->lock);
@@ -68,9 +64,7 @@ enter_critical_section(jvmtiEnv *jvmti)
 }
 
 /* Exit a critical section by doing a JVMTI Raw Monitor Exit */
-static void
-exit_critical_section(jvmtiEnv *jvmti)
-{
+static void exit_critical_section(jvmtiEnv *jvmti) {
     jvmtiError error;
 
     error = (*jvmti)->RawMonitorExit(jvmti, gdata->lock);
@@ -78,15 +72,15 @@ exit_critical_section(jvmtiEnv *jvmti)
 }
 
 void describe(jvmtiError err) {
-      jvmtiError err0;
-      char *descr;
-      err0 = (*jvmti)->GetErrorName(jvmti, err, &descr);
-      if (err0 == JVMTI_ERROR_NONE) {
-          printf("%s\n", descr);
-      } else {
-          printf("error [%d]\n", err);
-      }
- }
+    jvmtiError err0;
+    char *descr;
+    err0 = (*jvmti)->GetErrorName(jvmti, err, &descr);
+    if (err0 == JVMTI_ERROR_NONE) {
+        printf("%s\n", descr);
+    } else {
+        printf("error [%d]\n", err);
+    }
+}
 
 void describe2(const char *t, jvmtiError err) {
     printf("%s ", t);
@@ -94,234 +88,233 @@ void describe2(const char *t, jvmtiError err) {
 }
 
 // Exception callback
- static void JNICALL callbackException(jvmtiEnv *jvmti_env, JNIEnv* env, jthread thr, jmethodID method, jlocation location, jobject exception, jmethodID catch_method, jlocation catch_location) {
-enter_critical_section(jvmti); {
+static void JNICALL callbackException(jvmtiEnv *jvmti_env, JNIEnv* env, jthread thr, jmethodID method, jlocation location, jobject exception, jmethodID catch_method, jlocation catch_location) {
+    enter_critical_section(jvmti);
+    {
 
-      jvmtiError err, err1, err2, error;
-      jvmtiThreadInfo info, info1;
-      jvmtiThreadGroupInfo groupInfo;
-      jint num_monitors;
-      jobject *arr_monitors;
+        jvmtiError err, err1, err2, error;
+        jvmtiThreadInfo info, info1;
+        jvmtiThreadGroupInfo groupInfo;
+        jint num_monitors;
+        jobject *arr_monitors;
 
-      jvmtiFrameInfo frames[5];
-      jint count;
-      jint flag = 0;
-      jint thr_st_ptr;
-      jint thr_count;
-      jthread *thr_ptr;
-     
-      jvmtiError err3;
-      char *name;
-      char *sig;
-      char *gsig;
+        jvmtiFrameInfo frames[5];
+        jint count;
+        jint flag = 0;
+        jint thr_st_ptr;
+        jint thr_count;
+        jthread *thr_ptr;
 
-      err3  = (*jvmti)->GetMethodName(jvmti, method, &name, &sig, &gsig);
-      if (err3  != JVMTI_ERROR_NONE) {
-          printf("GetMethodName:%d\n", err);
-          return;
-      }
+        jvmtiError err3;
+        char *name;
+        char *sig;
+        char *gsig;
 
-      printf("Got Exception from Method:%s%s\n", name, sig);
+        err3  = (*jvmti)->GetMethodName(jvmti, method, &name, &sig, &gsig);
+        if (err3  != JVMTI_ERROR_NONE) {
+            printf("GetMethodName:%d\n", err);
+            return;
+        }
 
-
-      err = (*jvmti)->GetThreadInfo(jvmti, thr, &info);
-      if (err != JVMTI_ERROR_NONE) {
-          printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
-	  describe(err);
-                 jvmtiPhase phase;
-                 jvmtiError phaseStat;
-		 phaseStat = (*jvmti)->GetPhase(jvmti,&phase);
-                 printf("    current phase is %d\n", phase);
-          printf("\n");
-
-      }
+        printf("Got Exception from Method:%s%s\n", name, sig);
 
 
-      if (err == JVMTI_ERROR_NONE) {
-  	err1 = (*jvmti)->GetThreadGroupInfo(jvmti,info.thread_group, &groupInfo);
-                 if (err1 != JVMTI_ERROR_NONE)
-                 {
-          		printf("(GetThreadGroupInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
-	  		describe(err);
-          		printf("\n");
-                 }
-             }
+        err = (*jvmti)->GetThreadInfo(jvmti, thr, &info);
+        if (err != JVMTI_ERROR_NONE) {
+            printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
+            describe(err);
+            jvmtiPhase phase;
+            jvmtiError phaseStat;
+            phaseStat = (*jvmti)->GetPhase(jvmti,&phase);
+            printf("    current phase is %d\n", phase);
+            printf("\n");
 
-      if ((err == JVMTI_ERROR_NONE ) && (err1 == JVMTI_ERROR_NONE ) )
-             {
-                 printf("Current Thread is : %s and it belongs to Thread Group :  %s\n", info.name, groupInfo.name);
-             }
+        }
 
 
-      /*
-     err = (*jvmti)->GetOwnedMonitorInfo(jvmti, thr, &num_monitors, &arr_monitors);
-      if (err != JVMTI_ERROR_NONE) {
-          printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
-	  describe(err);
-       	  printf("\n");
-
-      }
-
-     printf("Number of Monitors Owned by this thread : %d\n", num_monitors);
-     */
-
-     /* Get Thread Status */
-     err = (*jvmti)->GetThreadState(jvmti, thr, &thr_st_ptr);
-     if (err != JVMTI_ERROR_NONE) {
-          printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
-          describe(err);
-          printf("\n");
-
-      }
-
-     if (err == JVMTI_ERROR_NONE) {
-	printf("Thread Status\n");
-	printf("==============\n");
-	if  ( thr_st_ptr & JVMTI_THREAD_STATE_ALIVE) {
-	    printf("Thread %s is Alive\n", info.name);
-		flag = 1;
-	}
-
-	if  ( thr_st_ptr & JVMTI_THREAD_STATE_TERMINATED) {
-
-	   printf("Thread %s has been Terminated\n", info.name);
-		flag = 1;
-	}
-
-	if ( thr_st_ptr & JVMTI_THREAD_STATE_RUNNABLE ) {
-
-	   printf("Thread %s is Runnable\n", info.name);
-		flag = 1;
-	}
-
-	if ( thr_st_ptr & JVMTI_THREAD_STATE_WAITING ) {
-	   printf("Thread %s waiting\n", info.name);
-		flag = 1;
-	}
-
-	if ( thr_st_ptr & JVMTI_THREAD_STATE_WAITING_INDEFINITELY ) {
-	   printf("Thread %s waiting indefinitely\n", info.name);
-		flag = 1;
-	}
-
-	if ( thr_st_ptr & JVMTI_THREAD_STATE_WAITING_WITH_TIMEOUT ) {    
-	   printf("Thread %s waiting with Timeout\n", info.name);
-		flag = 1;
-	}
-
-	if ( thr_st_ptr & JVMTI_THREAD_STATE_SLEEPING ) {
-	   printf("Thread %s Sleeping \n", info.name);
-		flag = 1;
-	}
-	
-//	if ( thr_st_ptr & JVMTI_THREAD_STATE_WAITING_FOR_NOTIFICATION ) {
-//	   printf("Thread %s Waiting for Notification \n", info.name);
-//		flag = 1;
-//	}
-		    
-	if ( thr_st_ptr & JVMTI_THREAD_STATE_IN_OBJECT_WAIT ) {
-	   printf("Thread %s is in Object Wait \n", info.name);
-		flag = 1;
-	}
-	if ( thr_st_ptr & JVMTI_THREAD_STATE_PARKED ) {
-	   printf("Thread %s is Parked \n", info.name);
-		flag = 1;
-	}
-	if ( thr_st_ptr & JVMTI_THREAD_STATE_BLOCKED_ON_MONITOR_ENTER ) { 
-	   printf("Thread %s is blocked on monitor enter \n", info.name);
-		flag = 1;
-	}
-	if ( thr_st_ptr & JVMTI_THREAD_STATE_SUSPENDED ) { 
-	   printf("Thread %s is Suspended \n", info.name);
-		flag = 1;
-	}
-	if ( thr_st_ptr & JVMTI_THREAD_STATE_INTERRUPTED ) {
-	   printf("Thread %s is Interrupted \n", info.name);
-		flag = 1;
-	}
-	if ( thr_st_ptr & JVMTI_THREAD_STATE_IN_NATIVE ) {
-
-	   printf("Thread %s is in Native \n", info.name);
-		flag = 1;
-	}
-	 if ( flag != 1 )  {
-    	    printf("Illegal value  %d for Thread State\n", thr_st_ptr);
-	}
-
-	}
-
-     /* Get All Threads */
-     err = (*jvmti)->GetAllThreads(jvmti, &thr_count, &thr_ptr);
-     if (err != JVMTI_ERROR_NONE) {
-          printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
-          describe(err);
-          printf("\n");
-
-      }
-      if (err == JVMTI_ERROR_NONE && thr_count >= 1) {
-	int i = 0;
-	printf("Thread Count: %d\n", thr_count);
-	
-	for ( i=0; i < thr_count; i++) {
-
-	    /* Make sure the stack variables are garbage free */
-    	    (void)memset(&info1,0, sizeof(info1));
-
-	    err1 = (*jvmti)->GetThreadInfo(jvmti, thr_ptr[i], &info1);
+        if (err == JVMTI_ERROR_NONE) {
+            err1 = (*jvmti)->GetThreadGroupInfo(jvmti,info.thread_group, &groupInfo);
             if (err1 != JVMTI_ERROR_NONE) {
-          	printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err1);
-          	describe(err1);
-          	printf("\n");
-            }
-
-            printf("Running Thread#%d: %s, Priority: %d, context class loader:%s\n", i+1,info1.name, info1.priority,(info1.context_class_loader == NULL ? ": NULL" : "Not Null"));
-
-
-	    /* Every string allocated by JVMTI needs to be freed */
-
-	    err2 = (*jvmti)->Deallocate(jvmti, (unsigned)info1.name);
-            if (err2 != JVMTI_ERROR_NONE) {
-                printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err2);
-                describe(err2);
+                printf("(GetThreadGroupInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
+                describe(err);
                 printf("\n");
             }
-	
+        }
+
+        if ((err == JVMTI_ERROR_NONE ) && (err1 == JVMTI_ERROR_NONE ) ) {
+            printf("Current Thread is : %s and it belongs to Thread Group :  %s\n", info.name, groupInfo.name);
+        }
 
 
-	}
-      }
+        /*
+        err = (*jvmti)->GetOwnedMonitorInfo(jvmti, thr, &num_monitors, &arr_monitors);
+        if (err != JVMTI_ERROR_NONE) {
+            printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
+        describe(err);
+              printf("\n");
+
+        }
+
+        printf("Number of Monitors Owned by this thread : %d\n", num_monitors);
+        */
+
+        /* Get Thread Status */
+        err = (*jvmti)->GetThreadState(jvmti, thr, &thr_st_ptr);
+        if (err != JVMTI_ERROR_NONE) {
+            printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
+            describe(err);
+            printf("\n");
+
+        }
+
+        if (err == JVMTI_ERROR_NONE) {
+            printf("Thread Status\n");
+            printf("==============\n");
+            if  ( thr_st_ptr & JVMTI_THREAD_STATE_ALIVE) {
+                printf("Thread %s is Alive\n", info.name);
+                flag = 1;
+            }
+
+            if  ( thr_st_ptr & JVMTI_THREAD_STATE_TERMINATED) {
+
+                printf("Thread %s has been Terminated\n", info.name);
+                flag = 1;
+            }
+
+            if ( thr_st_ptr & JVMTI_THREAD_STATE_RUNNABLE ) {
+
+                printf("Thread %s is Runnable\n", info.name);
+                flag = 1;
+            }
+
+            if ( thr_st_ptr & JVMTI_THREAD_STATE_WAITING ) {
+                printf("Thread %s waiting\n", info.name);
+                flag = 1;
+            }
+
+            if ( thr_st_ptr & JVMTI_THREAD_STATE_WAITING_INDEFINITELY ) {
+                printf("Thread %s waiting indefinitely\n", info.name);
+                flag = 1;
+            }
+
+            if ( thr_st_ptr & JVMTI_THREAD_STATE_WAITING_WITH_TIMEOUT ) {
+                printf("Thread %s waiting with Timeout\n", info.name);
+                flag = 1;
+            }
+
+            if ( thr_st_ptr & JVMTI_THREAD_STATE_SLEEPING ) {
+                printf("Thread %s Sleeping \n", info.name);
+                flag = 1;
+            }
+
+//  if ( thr_st_ptr & JVMTI_THREAD_STATE_WAITING_FOR_NOTIFICATION ) {
+//     printf("Thread %s Waiting for Notification \n", info.name);
+//      flag = 1;
+//  }
+
+            if ( thr_st_ptr & JVMTI_THREAD_STATE_IN_OBJECT_WAIT ) {
+                printf("Thread %s is in Object Wait \n", info.name);
+                flag = 1;
+            }
+            if ( thr_st_ptr & JVMTI_THREAD_STATE_PARKED ) {
+                printf("Thread %s is Parked \n", info.name);
+                flag = 1;
+            }
+            if ( thr_st_ptr & JVMTI_THREAD_STATE_BLOCKED_ON_MONITOR_ENTER ) {
+                printf("Thread %s is blocked on monitor enter \n", info.name);
+                flag = 1;
+            }
+            if ( thr_st_ptr & JVMTI_THREAD_STATE_SUSPENDED ) {
+                printf("Thread %s is Suspended \n", info.name);
+                flag = 1;
+            }
+            if ( thr_st_ptr & JVMTI_THREAD_STATE_INTERRUPTED ) {
+                printf("Thread %s is Interrupted \n", info.name);
+                flag = 1;
+            }
+            if ( thr_st_ptr & JVMTI_THREAD_STATE_IN_NATIVE ) {
+
+                printf("Thread %s is in Native \n", info.name);
+                flag = 1;
+            }
+            if ( flag != 1 )  {
+                printf("Illegal value  %d for Thread State\n", thr_st_ptr);
+            }
+
+        }
+
+        /* Get All Threads */
+        err = (*jvmti)->GetAllThreads(jvmti, &thr_count, &thr_ptr);
+        if (err != JVMTI_ERROR_NONE) {
+            printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
+            describe(err);
+            printf("\n");
+
+        }
+        if (err == JVMTI_ERROR_NONE && thr_count >= 1) {
+            int i = 0;
+            printf("Thread Count: %d\n", thr_count);
+
+            for ( i=0; i < thr_count; i++) {
+
+                /* Make sure the stack variables are garbage free */
+                (void)memset(&info1,0, sizeof(info1));
+
+                err1 = (*jvmti)->GetThreadInfo(jvmti, thr_ptr[i], &info1);
+                if (err1 != JVMTI_ERROR_NONE) {
+                    printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err1);
+                    describe(err1);
+                    printf("\n");
+                }
+
+                printf("Running Thread#%d: %s, Priority: %d, context class loader:%s\n", i+1,info1.name, info1.priority,(info1.context_class_loader == NULL ? ": NULL" : "Not Null"));
 
 
-     /* Get Stack Trace */
-     err = (*jvmti)->GetStackTrace(jvmti, thr, 0, 5, &frames, &count);
-     if (err != JVMTI_ERROR_NONE) {
-          printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
-          describe(err);
-          printf("\n");
+                /* Every string allocated by JVMTI needs to be freed */
 
-      }
-	printf("Number of records filled: %d\n", count);
-     if (err == JVMTI_ERROR_NONE && count >=1) {
-	
-	char *methodName;
-        methodName = "yet_to_call()";
-   	char *declaringClassName;
-        jclass declaring_class;
+                err2 = (*jvmti)->Deallocate(jvmti, (unsigned)info1.name);
+                if (err2 != JVMTI_ERROR_NONE) {
+                    printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err2);
+                    describe(err2);
+                    printf("\n");
+                }
 
-	int i=0;
 
-	printf("Exception Stack Trace\n");
-	printf("=====================\n");
-     	printf("Stack Trace Depth: %d\n", count); 
 
-        for ( i=0; i < count; i++) {
-		err = (*jvmti)->GetMethodName(jvmti, frames[i].method, &methodName, NULL, NULL);
-  	 	if (err == JVMTI_ERROR_NONE) {
+            }
+        }
 
-               		 err = (*jvmti)->GetMethodDeclaringClass(jvmti, frames[i].method, &declaring_class);
-                         err = (*jvmti)->GetClassSignature(jvmti, declaring_class, &declaringClassName, NULL);
-                         if (err == JVMTI_ERROR_NONE) {
-	                         printf("at method %s() in class %s\n", methodName, declaringClassName);
+
+        /* Get Stack Trace */
+        err = (*jvmti)->GetStackTrace(jvmti, thr, 0, 5, &frames, &count);
+        if (err != JVMTI_ERROR_NONE) {
+            printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
+            describe(err);
+            printf("\n");
+
+        }
+        printf("Number of records filled: %d\n", count);
+        if (err == JVMTI_ERROR_NONE && count >=1) {
+
+            char *methodName;
+            methodName = "yet_to_call()";
+            char *declaringClassName;
+            jclass declaring_class;
+
+            int i=0;
+
+            printf("Exception Stack Trace\n");
+            printf("=====================\n");
+            printf("Stack Trace Depth: %d\n", count);
+
+            for ( i=0; i < count; i++) {
+                err = (*jvmti)->GetMethodName(jvmti, frames[i].method, &methodName, NULL, NULL);
+                if (err == JVMTI_ERROR_NONE) {
+
+                    err = (*jvmti)->GetMethodDeclaringClass(jvmti, frames[i].method, &declaring_class);
+                    err = (*jvmti)->GetClassSignature(jvmti, declaring_class, &declaringClassName, NULL);
+                    if (err == JVMTI_ERROR_NONE) {
+                        printf("at method %s() in class %s\n", methodName, declaringClassName);
 
 
                         {
@@ -330,7 +323,7 @@ enter_critical_section(jvmti); {
                             jvmtiLocalVariableEntry* entries;
 
                             k=0;
-                            for (j=0;j<10;j++) {
+                            for (j=0; j<10; j++) {
                                 {
                                     jobject v;
                                     if ((err = (*jvmti)->GetLocalObject(jvmti, NULL, i, j, &v)) == JVMTI_ERROR_NONE && v != NULL) {
@@ -354,7 +347,7 @@ enter_critical_section(jvmti); {
                                         continue;
                                     }
                                 }
-                                
+
                                 {
                                     jint v;
                                     if ((err = (*jvmti)->GetLocalInt(jvmti, NULL, i, j, &v)) == JVMTI_ERROR_NONE && v != 0) {
@@ -363,7 +356,7 @@ enter_critical_section(jvmti); {
                                         continue;
                                     }
                                 }
-                                
+
                                 {
                                     jlong v;
                                     if ((err = (*jvmti)->GetLocalLong(jvmti, NULL, i, j, &v)) == JVMTI_ERROR_NONE && v != 0) {
@@ -372,7 +365,7 @@ enter_critical_section(jvmti); {
                                         continue;
                                     }
                                 }
-                                
+
                                 {
                                     jfloat v;
                                     if ((err = (*jvmti)->GetLocalFloat(jvmti, NULL, i, j, &v)) == JVMTI_ERROR_NONE && v != 0) {
@@ -381,7 +374,7 @@ enter_critical_section(jvmti); {
                                         continue;
                                     }
                                 }
-                                
+
                                 {
                                     jdouble v;
                                     if ((err = (*jvmti)->GetLocalDouble(jvmti, NULL, i, j, &v)) == JVMTI_ERROR_NONE && v != 0) {
@@ -419,30 +412,31 @@ enter_critical_section(jvmti); {
                     }
                 }
 
-	}
-        printf("\n");
+            }
+            printf("\n");
 
-        err = (*jvmti)->Deallocate(jvmti, (unsigned)methodName);
-        err = (*jvmti)->Deallocate(jvmti, (unsigned)declaringClassName);
+            err = (*jvmti)->Deallocate(jvmti, (unsigned)methodName);
+            err = (*jvmti)->Deallocate(jvmti, (unsigned)declaringClassName);
+        }
     }
- } exit_critical_section(jvmti);
+    exit_critical_section(jvmti);
 
- }
+}
 // VM Death callback
-     static void JNICALL callbackVMDeath(jvmtiEnv *jvmti_env, JNIEnv* jni_env)
-     {
-	 enter_critical_section(jvmti); {
+static void JNICALL callbackVMDeath(jvmtiEnv *jvmti_env, JNIEnv* jni_env) {
+    enter_critical_section(jvmti);
+    {
 
-		printf("Got VM Death event\n");
+        printf("Got VM Death event\n");
 
-	} exit_critical_section(jvmti);
+    }
+    exit_critical_section(jvmti);
 
-     }
+}
 
 
 /* Get a name for a jthread */
-static void get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int maxlen)
-{
+static void get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int maxlen) {
     jvmtiThreadInfo info;
     jvmtiError      error;
 
@@ -467,29 +461,29 @@ static void get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int ma
         }
 
         /* Every string allocated by JVMTI needs to be freed */
-	    error = (*jvmti)->Deallocate(jvmti, (unsigned)info.name);
-            if (error != JVMTI_ERROR_NONE) {
-                printf("(get_thread_name) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, error);
-                describe(error);
-                printf("\n");
-            }
+        error = (*jvmti)->Deallocate(jvmti, (unsigned)info.name);
+        if (error != JVMTI_ERROR_NONE) {
+            printf("(get_thread_name) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, error);
+            describe(error);
+            printf("\n");
+        }
 
     }
 }
 
 
 // VM init callback
-     static void JNICALL callbackVMInit(jvmtiEnv *jvmti_env, JNIEnv* jni_env, jthread thread)
-     {
-	enter_critical_section(jvmti); {
+static void JNICALL callbackVMInit(jvmtiEnv *jvmti_env, JNIEnv* jni_env, jthread thread) {
+    enter_critical_section(jvmti);
+    {
 
-	char  tname[MAX_THREAD_NAME_LENGTH];
-        static jvmtiEvent events[] = { JVMTI_EVENT_THREAD_START, JVMTI_EVENT_THREAD_END }; 
+        char  tname[MAX_THREAD_NAME_LENGTH];
+        static jvmtiEvent events[] = { JVMTI_EVENT_THREAD_START, JVMTI_EVENT_THREAD_END };
         int        i;
-	jvmtiFrameInfo frames[5];
-	jvmtiError err, err1;
+        jvmtiFrameInfo frames[5];
+        jvmtiError err, err1;
         jvmtiError error;
-	jint count;
+        jint count;
 
         /* The VM has started. */
         printf("Got VM init event\n");
@@ -497,48 +491,48 @@ static void get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int ma
         printf("callbackVMInit:  %s thread\n", tname);
 
 
-            error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION, (jthread)NULL);
-            check_jvmti_error(jvmti_env, error, "Cannot set event notification");
+        error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION, (jthread)NULL);
+        check_jvmti_error(jvmti_env, error, "Cannot set event notification");
 
 
 
-     } exit_critical_section(jvmti);
+    }
+    exit_critical_section(jvmti);
 
 }
 
-JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
- {
-      static GlobalAgentData data;
-      jvmtiError error;
-      jint res;
-      jvmtiEventCallbacks callbacks;
+JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) {
+    static GlobalAgentData data;
+    jvmtiError error;
+    jint res;
+    jvmtiEventCallbacks callbacks;
 
 
-      /* Setup initial global agent data area
-     *   Use of static/extern data should be handled carefully here.
-     *   We need to make sure that we are able to cleanup after ourselves
-     *     so anything allocated in this library needs to be freed in
-     *     the Agent_OnUnload() function.
-     */
-     (void)memset((void*)&data, 0, sizeof(data));
-     gdata = &data;
+    /* Setup initial global agent data area
+    *   Use of static/extern data should be handled carefully here.
+    *   We need to make sure that we are able to cleanup after ourselves
+    *     so anything allocated in this library needs to be freed in
+    *     the Agent_OnUnload() function.
+    */
+    (void)memset((void*)&data, 0, sizeof(data));
+    gdata = &data;
 
-      /*  We need to first get the jvmtiEnv* or JVMTI environment */
+    /*  We need to first get the jvmtiEnv* or JVMTI environment */
 
-      res = (*jvm)->GetEnv(jvm, (void **) &jvmti, JVMTI_VERSION_1_0);
+    res = (*jvm)->GetEnv(jvm, (void **) &jvmti, JVMTI_VERSION_1_0);
 
-      if (res != JNI_OK || jvmti == NULL) {
-	/* This means that the VM was unable to obtain this version of the
-         *   JVMTI interface, this is a fatal error.
-         */
+    if (res != JNI_OK || jvmti == NULL) {
+        /* This means that the VM was unable to obtain this version of the
+             *   JVMTI interface, this is a fatal error.
+             */
         printf("ERROR: Unable to access JVMTI Version 1 (0x%x),"
-                " is your J2SE a 1.5 or newer version?"
-                " JNIEnv's GetEnv() returned %d\n",
+               " is your J2SE a 1.5 or newer version?"
+               " JNIEnv's GetEnv() returned %d\n",
                JVMTI_VERSION_1, res);
 
-      }
+    }
 
-      /* Here we save the jvmtiEnv* for Agent_OnUnload(). */
+    /* Here we save the jvmtiEnv* for Agent_OnUnload(). */
     gdata->jvmti = jvmti;
 
 
@@ -564,10 +558,10 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
      *   Once the VM is initialized we will request more events.
     */
     error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
-                          JVMTI_EVENT_VM_INIT, (jthread)NULL);
+            JVMTI_EVENT_VM_INIT, (jthread)NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
     error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
-                          JVMTI_EVENT_VM_DEATH, (jthread)NULL);
+            JVMTI_EVENT_VM_DEATH, (jthread)NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
 
@@ -581,16 +575,13 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
     return JNI_OK;
 
 
- }
+}
 
 
 /* Agent_OnUnload: This is called immediately before the shared library is
  *   unloaded. This is the last code executed.
  */
-JNIEXPORT void JNICALL
-Agent_OnUnload(JavaVM *vm)
-{
-	/* Make sure all malloc/calloc/strdup space is freed */
-
+JNIEXPORT void JNICALL Agent_OnUnload(JavaVM *vm) {
+    /* Make sure all malloc/calloc/strdup space is freed */
 }
 
