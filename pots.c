@@ -153,6 +153,7 @@ enter_critical_section(jvmti); {
              }
 
 
+      /*
      err = (*jvmti)->GetOwnedMonitorInfo(jvmti, thr, &num_monitors, &arr_monitors);
       if (err != JVMTI_ERROR_NONE) {
           printf("(GetThreadInfo) Error expected: %d, got: %d\n", JVMTI_ERROR_NONE, err);
@@ -162,6 +163,7 @@ enter_critical_section(jvmti); {
       }
 
      printf("Number of Monitors Owned by this thread : %d\n", num_monitors);
+     */
 
      /* Get Thread Status */
      err = (*jvmti)->GetThreadState(jvmti, thr, &thr_st_ptr);
@@ -502,168 +504,7 @@ static void get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int ma
 
      } exit_critical_section(jvmti);
 
-     }
-
-
-/* JVMTI callback function. */
-static jvmtiIterationControl JNICALL
-reference_object(jvmtiObjectReferenceKind reference_kind,
-                jlong class_tag, jlong size, jlong* tag_ptr,
-                jlong referrer_tag, jint referrer_index, void *user_data)
-{
-
-	combined_size = combined_size + size;
-
-	switch (reference_kind) {
-
-		case JVMTI_REFERENCE_CLASS:
-			num_class_refs = num_class_refs + 1;
-			break;
-                case JVMTI_REFERENCE_FIELD:
-			num_field_refs = num_field_refs + 1;
-                        break;
-                case JVMTI_REFERENCE_ARRAY_ELEMENT:
-			num_array_refs = num_array_refs + 1;
-                        break;
-                case JVMTI_REFERENCE_CLASS_LOADER:
-			num_classloader_refs = num_classloader_refs + 1;
-                        break;
-                case JVMTI_REFERENCE_SIGNERS:
-			num_signer_refs = num_signer_refs + 1;
-                        break;
-                case JVMTI_REFERENCE_PROTECTION_DOMAIN:
-			num_protection_domain_refs = num_protection_domain_refs + 1;
-                        break;
-                case JVMTI_REFERENCE_INTERFACE:
-			num_interface_refs = num_interface_refs + 1;
-                        break;
-                case JVMTI_REFERENCE_STATIC_FIELD:
-			num_static_field_refs = num_static_field_refs + 1;
-                        break;
-                case JVMTI_REFERENCE_CONSTANT_POOL:
-			num_constant_pool_refs = num_constant_pool_refs + 1;
-                        break;
-                default:
-                        break;
-	}
-
-
-    return JVMTI_ITERATION_CONTINUE;
 }
-
-
-static void JNICALL callbackVMObjectAlloc(jvmtiEnv *jvmti_env, JNIEnv* jni_env, jthread thread, jobject object, jclass object_klass, jlong size) {
-
-
-	char *methodName;
-	char *className;
-	char *declaringClassName;
-	jclass declaring_class;
-	jvmtiError err;
-
-
-	if (size > 50) {
-
-		err = (*jvmti)->GetClassSignature(jvmti, object_klass, &className, NULL);
-
-		if (className != NULL) {
-			printf("\ntype %s object allocated with size %d\n", className, (jint)size);
-		}
-
-		//print stack trace
-		jvmtiFrameInfo frames[5];
-		jint count;
-		int i;
-
-		err = (*jvmti)->GetStackTrace(jvmti, NULL, 0, 5, &frames, &count);
-		if (err == JVMTI_ERROR_NONE && count >= 1) {
-
-			for (i = 0; i < count; i++) {
-				err = (*jvmti)->GetMethodName(jvmti, frames[i].method, &methodName, NULL, NULL);
-				if (err == JVMTI_ERROR_NONE) {
-
-					err = (*jvmti)->GetMethodDeclaringClass(jvmti, frames[i].method, &declaring_class);
-					err = (*jvmti)->GetClassSignature(jvmti, declaring_class, &declaringClassName, NULL); 
-					if (err == JVMTI_ERROR_NONE) {
-						printf("at method %s in class %s\n", methodName, declaringClassName);
-					}
-                        {
-                            jint n;
-                            int j,k;
-                            jvmtiLocalVariableEntry* entries;
-
-                            k=0;
-                            for (j=0;j<10;j++) {
-                                
-                                {
-                                    jint v;
-                                    if ((err = (*jvmti)->GetLocalInt(jvmti, NULL, i, j, &v)) == JVMTI_ERROR_NONE && v != 0) {
-                                        printf("arg %i %i\n", j, v);
-                                        k++;
-                                        continue;
-                                    }
-                                }
-                                
-                                {
-                                    jlong v;
-                                    if ((err = (*jvmti)->GetLocalLong(jvmti, NULL, i, j, &v)) == JVMTI_ERROR_NONE && v != 0) {
-                                        printf("arg %i %ll\n", j, v);
-                                        k++;
-                                        continue;
-                                    }
-                                }
-                                
-                                {
-                                    jfloat v;
-                                    if ((err = (*jvmti)->GetLocalFloat(jvmti, NULL, i, j, &v)) == JVMTI_ERROR_NONE && v != 0) {
-                                        printf("arg %i %.4f\n", j, v);
-                                        k++;
-                                        continue;
-                                    }
-                                }
-                                
-                                {
-                                    jdouble v;
-                                    if ((err = (*jvmti)->GetLocalDouble(jvmti, NULL, i, j, &v)) == JVMTI_ERROR_NONE && v != 0) {
-                                        printf("arg %i %.4f\n", j, v);
-                                        k++;
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
-				}
-			}
-		}
-
-		//reset counters
-		combined_size  = 0;
-		num_class_refs = 0;
-		num_field_refs = 0;
-		num_array_refs = 0;
-		num_classloader_refs = 0;
-		num_signer_refs = 0;
-		num_protection_domain_refs = 0;
-		num_interface_refs = 0;
-		num_static_field_refs = 0;
-		num_constant_pool_refs = 0;
-
-	        err = (*jvmti)->IterateOverObjectsReachableFromObject(jvmti, object, &reference_object, NULL);
-		if ( err != JVMTI_ERROR_NONE ) {
-		        printf("Cannot iterate over reachable objects\n");
-    		}
-
-		printf("\nThis object has references to objects of combined size %d\n", (jint)combined_size);
-		printf("This includes %d classes, %d fields, %d arrays, %d classloaders, %d signers arrays,\n", num_class_refs, num_field_refs, num_array_refs, num_classloader_refs, num_signer_refs);
-		printf("%d protection domains, %d interfaces, %d static fields, and %d constant pools.\n\n", num_protection_domain_refs, num_interface_refs, num_static_field_refs, num_constant_pool_refs);
-
-		err = (*jvmti)->Deallocate(jvmti, (unsigned)className);
-		err = (*jvmti)->Deallocate(jvmti, (unsigned)methodName);
-		err = (*jvmti)->Deallocate(jvmti, (unsigned)declaringClassName);
-	}
-}
-
-
 
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
  {
@@ -702,12 +543,7 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
 
 
     (void)memset(&capa, 0, sizeof(jvmtiCapabilities));
-    capa.can_signal_thread = 1;
-    capa.can_get_owned_monitor_info = 1;
-    capa.can_generate_method_entry_events = 1;
     capa.can_generate_exception_events = 1;
-    capa.can_generate_vm_object_alloc_events = 1;
-    capa.can_tag_objects = 1;	
     capa.can_access_local_variables = 1;
 
     error = (*jvmti)->AddCapabilities(jvmti, &capa);
@@ -718,7 +554,6 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
     callbacks.VMInit = &callbackVMInit; /* JVMTI_EVENT_VM_INIT */
     callbacks.VMDeath = &callbackVMDeath; /* JVMTI_EVENT_VM_DEATH */
     callbacks.Exception = &callbackException;/* JVMTI_EVENT_EXCEPTION */
-    callbacks.VMObjectAlloc = &callbackVMObjectAlloc;/* JVMTI_EVENT_VM_OBJECT_ALLOC */
 
 
     error = (*jvmti)->SetEventCallbacks(jvmti, &callbacks, (jint)sizeof(callbacks));
@@ -730,9 +565,9 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
     */
     error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
                           JVMTI_EVENT_VM_INIT, (jthread)NULL);
+    check_jvmti_error(jvmti, error, "Cannot set event notification");
     error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
                           JVMTI_EVENT_VM_DEATH, (jthread)NULL);
-    error = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE, JVMTI_EVENT_VM_OBJECT_ALLOC, (jthread)NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
 
