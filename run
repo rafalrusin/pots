@@ -1,0 +1,2 @@
+javac -d target Sample.java
+LD_LIBRARY_PATH=target CLASSPATH=target java -Xdebug -agentlib:pots Sample
