@@ -9,6 +9,7 @@
 #define MAX_TOKEN_LENGTH        16
 #define MAX_THREAD_NAME_LENGTH  512
 #define MAX_METHOD_NAME_LENGTH  1024
+#define MAX_FRAMES        256
 
 static jvmtiEnv *jvmti = NULL;
 static jvmtiCapabilities capa;
@@ -282,6 +283,77 @@ static void JNICALL callbackException(jvmtiEnv *jvmti_env, JNIEnv* env, jthread 
 
 
             }
+        }
+
+        {
+            jobject dump;
+            jclass dumpClass;
+
+            {
+                jclass c;
+                jmethodID m;
+
+                c = (*env)->FindClass(env, "pots/POTS");
+                if ((*env)->ExceptionOccurred(env)) {
+                    (*env)->ExceptionDescribe(env);
+                }
+                printf("class:%p\n",c);
+                m = (*env)->GetStaticMethodID(env, c, "newDump", "()Lpots/POTS$Dump;");
+                printf("method:%p\n",m);
+                dump = (*env)->CallStaticObjectMethod(env, c, m);
+                printf("dump: %p\n",dump);
+
+                dumpClass = (*env)->GetObjectClass(env, dump);
+            }
+
+
+            {
+                jvmtiStackInfo *stack_info;
+                jint thread_count;
+                int ti;
+
+                err = (*jvmti)->GetAllStackTraces(jvmti, MAX_FRAMES, &stack_info, &thread_count);
+                if (err != JVMTI_ERROR_NONE) {
+                    describe2("GetAllStackTraces", err);
+                }
+                for (ti = 0; ti < thread_count; ++ti) {
+                    jvmtiStackInfo *infop = &stack_info[ti];
+                    jthread thread = infop->thread;
+                    jint state = infop->state;
+                    jvmtiFrameInfo *frames = infop->frame_buffer;
+                    int fi;
+
+                    {
+                        jmethodID m;
+
+                        m=(*env)->GetMethodID(env, dumpClass, "visitThread", "(Ljava/lang/Thread;I)V");
+                        printf("method: %p\n",m);
+                        (*env)->CallObjectMethod(env, dump, m, thread, state);
+                    }
+
+
+
+                    printf("thread\n");
+                    for (fi = 0; fi < infop->frame_count; fi++) {
+                        char *methodName="";
+                        err = (*jvmti)->GetMethodName(jvmti, frames[fi].method, &methodName, NULL, NULL);
+                        printf("frame (%s:%i)\n", methodName, frames[fi].location);
+                        //myFramePrinter(frames[fi].method, frames[fi].location);
+                        {
+                            jmethodID m;
+                            jstring jmethodName;
+
+                            jmethodName=(*env)->NewStringUTF(env, methodName);
+
+                            m=(*env)->GetMethodID(env, dumpClass, "visitMethod", "(Ljava/lang/String;I)V");
+                            printf("method: %p\n",m);
+                            (*env)->CallObjectMethod(env, dump, m, jmethodName, frames[fi].location);
+                        }
+                    }
+                }
+                err = (*jvmti)->Deallocate(jvmti, stack_info);
+            }
+
         }
 
 

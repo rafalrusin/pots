@@ -1,10 +1,12 @@
 package pots;
 public class POTS {
     public static class Dump {
-        public void visitThread(Thread t) {
+        public void visitThread(Thread t, int state) {
+            System.out.println("jthread: " + t.getName() + " state:" + state);
         }
 
-        public void visitMethod(String name) {
+        public void visitMethod(String name, int location) {
+            System.out.println("jmethod: " + name + " line:" + location);
         }
         public void visitArg(Object arg) {
         }
