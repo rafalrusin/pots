@@ -1,3 +1,5 @@
 rm -fr target
-mkdir target
-gcc -shared -fPIC -I$JAVA_HOME/include -I$JAVA_HOME/include/linux pots.c -o target/libpots.so
+mkdir -p target/dist
+gcc -shared -fPIC -I$JAVA_HOME/include -I$JAVA_HOME/include/linux pots.c -o target/dist/libpots.so
+javac -d target/dist pots/POTS.java
+

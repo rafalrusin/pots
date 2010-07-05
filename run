@@ -1,2 +1,3 @@
-javac -d target Sample.java
-LD_LIBRARY_PATH=target CLASSPATH=target java -Xdebug -agentlib:pots Sample
+mkdir -p target/sample
+javac -d target/sample Sample.java
+LD_LIBRARY_PATH=target/dist CLASSPATH=target/dist:target/sample java -Xdebug -agentlib:pots Sample

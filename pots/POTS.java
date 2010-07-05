@@ -1,3 +1,4 @@
+package pots;
 public class POTS {
     public static class Dump {
         public void visitThread(Thread t) {
