@@ -5,33 +5,63 @@ public class POTS {
             System.out.println("jthread: " + t.getName() + " state:" + state);
         }
 
-        public void visitMethod(String name, int location) {
-            System.out.println("jmethod: " + name + " line:" + location);
+        public void visitMethod(Class methodClass, String methodName, int location) {
+            System.out.println("jmethod: " + methodClass.getCanonicalName() + " " + methodName+ " line:" + location);
         }
         public void visitArg(Object arg) {
+            String argClass = arg != null ? arg.getClass().getCanonicalName() : "";
+            System.out.println("jarg: " + argClass + " " + arg);
         }
-        public void endMethod() {
+        public void visitArg(int arg) {
+            System.out.println("jarg: " + arg);
         }
-        public void endThread() {
+        public void visitArg(long arg) {
+            System.out.println("jarg: " + arg);
+        }
+        public void visitArg(float arg) {
+            System.out.println("jarg: " + arg);
+        }
+        public void visitArg(double arg) {
+            System.out.println("jarg: " + arg);
+        }
+        public void visitMethodEnd() {
+            System.out.println("jmethod end");
+        }
+        public void visitThreadEnd() {
+            System.out.println("jthread end");
         }
 
         public void completed() {
+            System.out.println("jcompleted");
         }
     }
 
-    public static class POTSException extends Exception {}
+    public static class POTSException extends Exception {
+        private static final long serialVersionUID = 1L;
+    }
 
     private static Thread thread;
 
     public static class POTSRunnable implements Runnable {
         public void run() {
-            while (true) {
+            try {
+                while (true) {
+                    Thread.sleep(1000);
+                    System.out.println("poll");
+                    try {
+                        throw new POTSException();
+                    } catch (POTSException e) {
+                    }
+                }
+            } catch (InterruptedException e) {
+                System.out.println("exit");
             }
         }
     }
 
     public static void init() {
-        thread = new Thread(new POTSRunnable());
+        thread = new Thread(new POTSRunnable(), "POTSPoller");
+        thread.setDaemon(true);
         thread.start();
         System.out.println("init");
     }

@@ -6,7 +6,12 @@ public class Sample {
         //return a + new Sample().toString();
     }
 
-    public static void main(String[] args) {
-        System.out.println("abc" + eval("bb", 10, new Sample()));
+    public static void main(String[] args) throws Exception {
+        try {
+            System.out.println("abc" + eval("bb", 10, new Sample()));
+        } catch (RuntimeException e) {
+        }
+        Thread.sleep(3000);
+        System.out.println("Sample finishing");
     }
 }
