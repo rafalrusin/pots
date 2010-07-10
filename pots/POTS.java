@@ -1,8 +1,8 @@
 package pots;
 public class POTS {
     public static class Dump {
-        public void visitThread(Thread t, int state) {
-            System.out.println("jthread: " + t.getName() + " state:" + state);
+        public void visitThread(Thread t, int state, long cpuTime) {
+            System.out.println("jthread: " + t.getName() + " state:" + state + " cpuTime:" + cpuTime);
         }
 
         public void visitMethod(Class methodClass, String methodName, int location) {

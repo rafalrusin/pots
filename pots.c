@@ -158,8 +158,10 @@ static void JNICALL callbackException(jvmtiEnv *jvmti_env, JNIEnv* env, jthread 
 
                         {
                             jmethodID m;
-                            m=(*env)->GetMethodID(env, dumpClass, "visitThread", "(Ljava/lang/Thread;I)V");
-                            (*env)->CallObjectMethod(env, dump, m, thread, state);
+                            jlong cpuTime;
+                            (*jvmti)->GetThreadCpuTime(jvmti, thread, &cpuTime);
+                            m=(*env)->GetMethodID(env, dumpClass, "visitThread", "(Ljava/lang/Thread;IJ)V");
+                            (*env)->CallObjectMethod(env, dump, m, thread, state, cpuTime);
                         }
 
                         for (fi = 0; fi < infop->frame_count; fi++) {
@@ -378,6 +380,7 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) 
     (void)memset(&capa, 0, sizeof(jvmtiCapabilities));
     capa.can_generate_exception_events = 1;
     capa.can_access_local_variables = 1;
+    capa.can_get_thread_cpu_time = 1;
 
     error = (*jvmti)->AddCapabilities(jvmti, &capa);
     check_jvmti_error(jvmti, error, "Unable to get necessary JVMTI capabilities.");
