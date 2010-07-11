@@ -6,11 +6,11 @@ public class POTS {
         }
 
         public void visitMethod(Class methodClass, String methodName, int location) {
-            System.out.println("jmethod: " + methodClass.getCanonicalName() + " " + methodName+ " line:" + location);
+            System.out.println("jmethod: " + methodClass + " " + methodName+ " line:" + location);
         }
         public void visitArg(Object arg) {
-            String argClass = arg != null ? arg.getClass().getCanonicalName() : "";
-            System.out.println("jarg: " + argClass + " " + arg);
+            String argClass = arg != null ? arg.getClass().toString() : "";
+            System.out.println("jarg: " + argClass);
         }
         public void visitArg(int arg) {
             System.out.println("jarg: " + arg);

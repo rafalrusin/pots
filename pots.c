@@ -144,6 +144,9 @@ static void JNICALL callbackException(jvmtiEnv *jvmti_env, JNIEnv* env, jthread 
                     jvmtiStackInfo *stack_info;
                     jint thread_count;
                     int ti;
+                    jthread currentThread=0;
+
+                    check_jvmti_error(jvmti, (*jvmti)->GetCurrentThread(jvmti, &currentThread), "GetCurrentThread");
 
                     err = (*jvmti)->GetAllStackTraces(jvmti, MAX_FRAMES, &stack_info, &thread_count);
                     if (err != JVMTI_ERROR_NONE) {
@@ -154,7 +157,16 @@ static void JNICALL callbackException(jvmtiEnv *jvmti_env, JNIEnv* env, jthread 
                         jthread thread = infop->thread;
                         jint state = infop->state;
                         jvmtiFrameInfo *frames = infop->frame_buffer;
+                        jvmtiThreadInfo threadInfo;
                         int fi;
+
+                        //if (thread == currentThread) continue;
+
+                        check_jvmti_error(jvmti, (*jvmti)->GetThreadInfo(jvmti, thread, &threadInfo), "GetThreadInfo");
+                        if (strcmp("POTSPoller", threadInfo.name) == 0) continue; 
+
+                        printf("Suspend %s\n", threadInfo.name);
+                        check_jvmti_error(jvmti, (*jvmti)->SuspendThread(jvmti, thread), "SuspendThread");
 
                         {
                             jmethodID m;
@@ -166,10 +178,12 @@ static void JNICALL callbackException(jvmtiEnv *jvmti_env, JNIEnv* env, jthread 
 
                         for (fi = 0; fi < infop->frame_count; fi++) {
                             char *methodName="";
+                            char *signature="";
+                            char *generic="";
                             jclass methodClass;
-                            err = (*jvmti)->GetMethodName(jvmti, frames[fi].method, &methodName, NULL, NULL);
+                            err = (*jvmti)->GetMethodName(jvmti, frames[fi].method, &methodName, &signature, &generic);
                             err = (*jvmti)->GetMethodDeclaringClass(jvmti, frames[fi].method, &methodClass);
-                            //printf("frame (%s:%i)\n", methodName, frames[fi].location);
+                            printf("frame (%s:%i) %s %s\n", methodName, (int) frames[fi].location, signature, generic);
                             {
                                 //Visit method
                                 jmethodID m;
@@ -184,41 +198,94 @@ static void JNICALL callbackException(jvmtiEnv *jvmti_env, JNIEnv* env, jthread 
                             {
                                 //Visit args
                                 jint n;
-                                int j,k;
+                                int j,k,slot=0,finished=0;
+                                char *signature2=signature;
                                 jvmtiLocalVariableEntry* entries;
 
                                 k=0;
-                                for (j=0; j<10; j++) {
-                                    jobject v1;
+
+                                signature2++;
+
+                                while (!finished && *signature2 != ')') {
+                                    jobject v1=NULL;
                                     jint v2;
                                     jlong v3;
                                     jfloat v4;
                                     jdouble v5;
+                                    switch (*signature2) {
+                                        case 'L': {
+                                            while (*signature2 != ';') signature2++;
+                                            {
+                                                jmethodID m;
+                                                (*jvmti)->GetLocalObject(jvmti, thread, fi, slot, &v1);
+                                                m=(*env)->GetMethodID(env, dumpClass, "visitArg", "(Ljava/lang/Object;)V");
+                                                (*env)->CallObjectMethod(env, dump, m, v1);
+                                                //if ((*env)->ExceptionOccurred(env)) {
+                                                //    (*env)->ExceptionDescribe(env);
+                                                //}
+                                            }
+                                            slot+=1;
+                                        } break;
+                                        case 'I':{
+                                            slot+=1;
+                                        } break;
+                                        case 'J':{
+                                            slot+=2;
+                                        } break;
+                                        case 'F':{
+                                            slot+=1;
+                                        } break;
+                                        case 'D':{
+                                            slot+=2;
+                                        } break;
+                                        case 'Z':{
+                                            slot+=1;
+                                        } break;
+                                        case '[':{
+                                            slot+=1;
+                                            finished=1;
+                                        } break;
+                                        default:
+                                            printf("Signature error %c\n", *signature2);
+                                        break;
+                                    }
+                                    signature2++;
+        /*
                                     if ((err = (*jvmti)->GetLocalObject(jvmti, thread, fi, j, &v1)) == JVMTI_ERROR_NONE && v1 != NULL) {
                                         jmethodID m;
+                                        jclass c;
+                                        c = (*env)->GetObjectClass(env, v1);
+        printf("blea1\n");
                                         m=(*env)->GetMethodID(env, dumpClass, "visitArg", "(Ljava/lang/Object;)V");
-                                        (*env)->CallObjectMethod(env, dump, m, v1);
+                                        if (c != NULL) {
+                                            (*env)->CallObjectMethod(env, dump, m, v1);
+                                        }
                                     } else if ((err = (*jvmti)->GetLocalInt(jvmti, thread, fi, j, &v2)) == JVMTI_ERROR_NONE && v2 != 0) {
                                         jmethodID m;
+        printf("blea2\n");
                                         m=(*env)->GetMethodID(env, dumpClass, "visitArg", "(I)V");
                                         (*env)->CallObjectMethod(env, dump, m, v2);
                                     } else if ((err = (*jvmti)->GetLocalLong(jvmti, thread, fi, j, &v3)) == JVMTI_ERROR_NONE && v3 != 0) {
                                         jmethodID m;
+        printf("blea3\n");
                                         m=(*env)->GetMethodID(env, dumpClass, "visitArg", "(J)V");
                                         (*env)->CallObjectMethod(env, dump, m, v3);
                                     } else if ((err = (*jvmti)->GetLocalFloat(jvmti, thread, fi, j, &v4)) == JVMTI_ERROR_NONE && v4 != 0) {
                                         jmethodID m;
+        printf("blea4\n");
                                         m=(*env)->GetMethodID(env, dumpClass, "visitArg", "(F)V");
                                         (*env)->CallObjectMethod(env, dump, m, v4);
                                     } else if ((err = (*jvmti)->GetLocalDouble(jvmti, thread, fi, j, &v5)) == JVMTI_ERROR_NONE && v5 != 0) {
                                         jmethodID m;
+        printf("blea5\n");
                                         m=(*env)->GetMethodID(env, dumpClass, "visitArg", "(D)V");
                                         (*env)->CallObjectMethod(env, dump, m, v5);
                                     } else {
                                         jmethodID m;
+        printf("blea6\n");
                                         m=(*env)->GetMethodID(env, dumpClass, "visitArg", "(Ljava/lang/Object;)V");
                                         (*env)->CallObjectMethod(env, dump, m, NULL);
-                                    }
+                                    }*/
                                 }
                             }
                             {
@@ -232,6 +299,7 @@ static void JNICALL callbackException(jvmtiEnv *jvmti_env, JNIEnv* env, jthread 
                             m=(*env)->GetMethodID(env, dumpClass, "visitThreadEnd", "()V");
                             (*env)->CallObjectMethod(env, dump, m);
                         }
+                        check_jvmti_error(jvmti, (*jvmti)->ResumeThread(jvmti, thread), "ResumeThread");
                     }
                     err = (*jvmti)->Deallocate(jvmti, (unsigned char *)stack_info);
                     {
@@ -381,6 +449,7 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) 
     capa.can_generate_exception_events = 1;
     capa.can_access_local_variables = 1;
     capa.can_get_thread_cpu_time = 1;
+    capa.can_suspend = 1;
 
     error = (*jvmti)->AddCapabilities(jvmti, &capa);
     check_jvmti_error(jvmti, error, "Unable to get necessary JVMTI capabilities.");
